@@ -49,6 +49,140 @@ public class DuplicateCheckTest {
     }
 
     @Test
+    public void testPmidIguaisSaoDuplicatas() {
+        simpleArticle.setField(StandardField.PMID, "99999999");
+        unrelatedArticle.setField(StandardField.PMID, "99999999");
+
+        assertTrue(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testPresencaPrimeiroDoi() {
+        simpleArticle.setField(StandardField.DOI, "");
+        unrelatedArticle.setField(StandardField.DOI, "10.1016/j.is.2019.0X.006");
+
+        assertFalse(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+
+        simpleArticle.setField(StandardField.DOI, "10.1016/j.is.2019.0X.006");
+        assertTrue(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testPresencaSegundoDoi() {
+        simpleArticle.setField(StandardField.DOI, "10.1016/j.is.2019.0X.006");
+        unrelatedArticle.setField(StandardField.DOI, "");
+
+        assertFalse(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+
+        unrelatedArticle.setField(StandardField.DOI, "10.1016/j.is.2019.0X.006");
+        assertTrue(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testPresencaPrimeiroISBN() {
+        simpleArticle.setField(StandardField.ISBN, "");
+        unrelatedArticle.setField(StandardField.ISBN, "0-123456-47-9");
+
+        assertFalse(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+
+        simpleArticle.setField(StandardField.ISBN, "0-123456-47-9");
+        assertTrue(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testPresencaSegundoISBN() {
+        simpleArticle.setField(StandardField.ISBN, "0-123456-47-9");
+        unrelatedArticle.setField(StandardField.ISBN, "");
+
+        assertFalse(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+
+        unrelatedArticle.setField(StandardField.ISBN, "0-123456-47-9");
+        assertTrue(duplicateChecker.isDuplicate(simpleArticle, unrelatedArticle, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testTiposEntradaIguaisDiferentes() {
+        BibEntry duplicateWithDifferentType = (BibEntry) simpleArticle.clone();
+        duplicateWithDifferentType.setType(StandardEntryType.InBook);
+
+        assertFalse(duplicateChecker.isDuplicate(simpleArticle, duplicateWithDifferentType, BibDatabaseMode.BIBTEX));
+
+        duplicateWithDifferentType.setType(simpleArticle.getType());
+        assertTrue(duplicateChecker.isDuplicate(simpleArticle, duplicateWithDifferentType, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testEdicoesIguaisDiferentes() {
+        BibEntry edicaoUm = new BibEntry(StandardEntryType.Book);
+        edicaoUm.setField(StandardField.TITLE, "O famoso Java");
+        edicaoUm.setField(StandardField.AUTHOR, "Leles, Alvaro");
+        edicaoUm.setField(StandardField.PUBLISHER, "Arvorenda");
+        edicaoUm.setField(StandardField.DATE, "2000");
+        edicaoUm.setField(StandardField.EDITION, "1");
+
+        BibEntry edicaoDois = new BibEntry(StandardEntryType.Book);
+        edicaoDois.setField(StandardField.TITLE, "O famoso Java");
+        edicaoDois.setField(StandardField.AUTHOR, "Leles, Alvaro");
+        edicaoDois.setField(StandardField.PUBLISHER, "Arvorenda");
+        edicaoDois.setField(StandardField.DATE, "2019");
+        edicaoDois.setField(StandardField.EDITION, "2");
+
+        assertFalse(duplicateChecker.isDuplicate(edicaoUm, edicaoDois, BibDatabaseMode.BIBTEX));
+
+        edicaoDois.setField(StandardField.DATE, "2000");
+        edicaoDois.setField(StandardField.EDITION, "1");
+
+        assertTrue(duplicateChecker.isDuplicate(edicaoUm, edicaoDois, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testCapPagDiferentes() {
+        //Aqui é chamada um teste auxiliar que é próprio para tratar atributos específicos
+
+        twoEntriesWithDifferentSpecificFieldsAreNotDuplicates(simpleInbook, StandardField.CHAPTER,
+                "Capítulo três – Vai que dá",
+                "Capítulo cinco – Não deu");
+
+        twoEntriesWithDifferentSpecificFieldsAreNotDuplicates(simpleInbook, StandardField.PAGES, "35-42", "72-90");
+    }
+
+    @Test
+    public void testEntradaSemTipo() {
+        BibEntry entradaSemTipo = new BibEntry();
+        BibEntry entradaTipada = new BibEntry(StandardEntryType.Book);
+
+        assertFalse(duplicateChecker.isDuplicate(entradaSemTipo, entradaTipada, BibDatabaseMode.BIBTEX));
+    }
+
+    @Test
+    public void testDistantThreshold() {
+        //Aqui testaremos se os atributos obrigatórios estão muito ou pouco semelhantes
+
+        BibEntry entradaX = new BibEntry(StandardEntryType.Article);
+        entradaX.setField(StandardField.YEAR, "2019");
+        entradaX.setField(StandardField.TITLE, "Ta tudo bem");
+        entradaX.setField(StandardField.JOURNAL, "O impopular");
+
+        BibEntry entradaY = new BibEntry(StandardEntryType.Book);
+        entradaY.setField(StandardField.TITLE, "O famoso Java");
+        entradaY.setField(StandardField.AUTHOR, "Leles, Alvaro");
+        entradaY.setField(StandardField.PUBLISHER, "Arvorenda");
+        entradaY.setField(StandardField.DATE, "2019");
+        entradaY.setField(StandardField.EDITION, "2");
+
+        assertFalse(duplicateChecker.isDuplicate(entradaX, entradaY, BibDatabaseMode.BIBTEX));
+
+        entradaY = new BibEntry(StandardEntryType.Article);
+        entradaY.setField(StandardField.YEAR, "2019");
+        entradaY.setField(StandardField.TITLE, "Ta tudo bem");
+        entradaY.setField(StandardField.JOURNAL, "O impopular");
+
+        assertTrue(duplicateChecker.isDuplicate(entradaX, entradaY, BibDatabaseMode.BIBTEX));
+    }
+
+
+
+    @Test
     public void testDuplicateDetection() {
         BibEntry one = new BibEntry(StandardEntryType.Article);
 
